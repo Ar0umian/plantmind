@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+pydantic
+httpx
+openai
+python-dotenv
+numpy
+jinja2
+tavily-python
+pytest
