@@ -1,0 +1,24 @@
+{
+  "_note": "Local subset of MITRE ATT&CK for ICS used for mapping. Technique IDs and names were written from memory and are marked verified=false. Verify each one against the official matrix at attack.mitre.org before the final submission.",
+  "techniques": [
+    {"id": "T0833", "name": "Modify Control Logic", "verified": false},
+    {"id": "T0889", "name": "Modify Program", "verified": false},
+    {"id": "T0880", "name": "Loss of Safety", "verified": false},
+    {"id": "T0836", "name": "Modify Parameter", "verified": false},
+    {"id": "T0878", "name": "Alarm Suppression", "verified": false},
+    {"id": "T0838", "name": "Modify Alarm Settings", "verified": false},
+    {"id": "T0856", "name": "Spoof Reporting Message", "verified": false},
+    {"id": "T0855", "name": "Unauthorized Command Message", "verified": false},
+    {"id": "T0832", "name": "Manipulation of View", "verified": false},
+    {"id": "T0831", "name": "Manipulation of Control", "verified": false}
+  ],
+  "mappings": {
+    "interlock_removed": ["T0833", "T0880"],
+    "interlock_weakened": ["T0833", "T0836", "T0880"],
+    "interlock_added": ["T0889"],
+    "alarm_removed": ["T0878", "T0838"],
+    "threshold_changed": ["T0836"],
+    "spoofed_reading": ["T0856", "T0832"],
+    "abnormal_command": ["T0855", "T0831"]
+  }
+}
