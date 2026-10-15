@@ -1,0 +1,1 @@
+- step 0: structure, docs, core contracts and LLM client

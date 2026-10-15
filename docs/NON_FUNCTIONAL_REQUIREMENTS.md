@@ -62,7 +62,7 @@ Priority: M = Must, S = Should, C = Could.
 ## 9. Maintainability and Testability
 - NFR-MNT-01 (M) All cross-workstream data uses typed pydantic models in
   core/contracts.py with a CONTRACT_VERSION.
-- NFR-MNT-02 (M) Each workstream edits only its own folders.
+- NFR-MNT-02 (M) Modules are built in the order of docs/BUILD_PLAN.md; shared contracts change only with a CONTRACT_VERSION bump.
 - NFR-MNT-03 (M) Unit tests for the ST parser, the interlock evaluator, and
   the change-guard rules; integration test per scenario.
 - NFR-MNT-04 (S) Structured logging, one line per event.
