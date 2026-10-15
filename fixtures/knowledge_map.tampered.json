@@ -1,0 +1,224 @@
+{
+  "contract_version": "0.1.0",
+  "plant_name": "WaterPlant",
+  "program_hash": "44ab82b18400d200",
+  "equipment": [
+    {
+      "tag": "LT-101",
+      "name": "Raw water tank level",
+      "kind": "sensor",
+      "unit": "%"
+    },
+    {
+      "tag": "FT-101",
+      "name": "Intake flow",
+      "kind": "sensor",
+      "unit": "m3/h"
+    },
+    {
+      "tag": "AT-201",
+      "name": "Chlorine residual",
+      "kind": "sensor",
+      "unit": "ppm"
+    },
+    {
+      "tag": "LT-301",
+      "name": "Treated water tank level",
+      "kind": "sensor",
+      "unit": "%"
+    },
+    {
+      "tag": "PT-301",
+      "name": "Distribution discharge pressure",
+      "kind": "sensor",
+      "unit": "bar"
+    },
+    {
+      "tag": "P-101",
+      "name": "Intake pump",
+      "kind": "pump",
+      "unit": null
+    },
+    {
+      "tag": "P-201",
+      "name": "Chlorine dosing pump",
+      "kind": "pump",
+      "unit": null
+    },
+    {
+      "tag": "P-301",
+      "name": "Distribution pump",
+      "kind": "pump",
+      "unit": null
+    }
+  ],
+  "interlocks": [
+    {
+      "id": "IL-01",
+      "target": "P-101",
+      "action": "trip",
+      "conditions": [
+        {
+          "tag": "LT-101",
+          "op": "<",
+          "value": 15.0
+        }
+      ],
+      "combinator": "any",
+      "purpose": "Trip intake pump on raw tank low-low (dry-run protection)",
+      "source_lines": [
+        53
+      ]
+    },
+    {
+      "id": "IL-02",
+      "target": "P-101",
+      "action": "trip",
+      "conditions": [
+        {
+          "tag": "LT-301",
+          "op": ">",
+          "value": 95.0
+        }
+      ],
+      "combinator": "any",
+      "purpose": "Trip intake pump on treated tank high-high (overflow protection)",
+      "source_lines": [
+        55
+      ]
+    },
+    {
+      "id": "IL-03",
+      "target": "P-201",
+      "action": "trip",
+      "conditions": [
+        {
+          "tag": "P-101",
+          "op": "==",
+          "value": false
+        }
+      ],
+      "combinator": "any",
+      "purpose": "Trip chlorine dosing when there is no intake flow",
+      "source_lines": [
+        68
+      ]
+    },
+    {
+      "id": "IL-04",
+      "target": "UNWIRED",
+      "action": "trip",
+      "conditions": [
+        {
+          "tag": "AT-201",
+          "op": ">",
+          "value": 4.0
+        }
+      ],
+      "combinator": "any",
+      "purpose": "Trip chlorine dosing on chlorine overdose",
+      "source_lines": [
+        70
+      ]
+    },
+    {
+      "id": "IL-05",
+      "target": "P-301",
+      "action": "trip",
+      "conditions": [
+        {
+          "tag": "LT-301",
+          "op": "<",
+          "value": 15.0
+        }
+      ],
+      "combinator": "any",
+      "purpose": "Trip distribution pump on treated tank low-low",
+      "source_lines": [
+        83
+      ]
+    },
+    {
+      "id": "IL-06",
+      "target": "P-301",
+      "action": "trip",
+      "conditions": [
+        {
+          "tag": "PT-301",
+          "op": ">",
+          "value": 6.0
+        }
+      ],
+      "combinator": "any",
+      "purpose": "Trip distribution pump on overpressure",
+      "source_lines": [
+        85
+      ]
+    }
+  ],
+  "alarms": [
+    {
+      "id": "AL-01",
+      "tag": "LT-101",
+      "op": "<",
+      "value": 25.0,
+      "message": ""
+    },
+    {
+      "id": "AL-02",
+      "tag": "AT-201",
+      "op": "<",
+      "value": 0.2,
+      "message": ""
+    },
+    {
+      "id": "AL-03",
+      "tag": "PT-301",
+      "op": ">",
+      "value": 5.0,
+      "message": ""
+    }
+  ],
+  "relations": [
+    {
+      "source": "LT-101",
+      "target": "P-101",
+      "description": "P-101 auto-starts when LT-101 >= 50.0 AND LT-301 < 85.0 (control rule, line 44)"
+    },
+    {
+      "source": "LT-101",
+      "target": "P-101",
+      "description": "P-101 auto-stops when LT-101 < 30.0 OR LT-301 > 90.0 (control rule, line 47)"
+    },
+    {
+      "source": "P-101",
+      "target": "P-201",
+      "description": "P-201 auto-starts when P-101 is on AND AT-201 < 1.2 (control rule, line 59)"
+    },
+    {
+      "source": "P-101",
+      "target": "P-201",
+      "description": "P-201 auto-stops when P-101 is off OR AT-201 > 99.0 (control rule, line 62)"
+    },
+    {
+      "source": "LT-301",
+      "target": "P-301",
+      "description": "P-301 auto-starts when LT-301 >= 30.0 (control rule, line 74)"
+    },
+    {
+      "source": "LT-301",
+      "target": "P-301",
+      "description": "P-301 auto-stops when LT-301 < 20.0 (control rule, line 77)"
+    },
+    {
+      "source": "SCADA/HMI",
+      "target": "P-201",
+      "description": "P-201 can also be commanded by an external SCADA/HMI write (P_201_HMI_CMD); interlocks still apply"
+    },
+    {
+      "source": "SCADA/HMI",
+      "target": "P-301",
+      "description": "P-301 can also be commanded by an external SCADA/HMI write (P_301_HMI_CMD); interlocks still apply"
+    }
+  ]
+}

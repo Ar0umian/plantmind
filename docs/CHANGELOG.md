@@ -1,3 +1,5 @@
 - step 0: structure, docs, core contracts and LLM client
 - step 0: MITRE ICS subset (IDs unverified)
 - step 1: plant simulator, 5 scenarios, baseline and tampered .st programs, runner
+- step 2: ST parser, knowledge map builder, fixtures/knowledge_map*.json
+- step 3: deterministic detection (expected-behavior engine, physical checks, evidence episodes)
