@@ -1,2 +1,3 @@
 - step 0: structure, docs, core contracts and LLM client
 - step 0: MITRE ICS subset (IDs unverified)
+- step 1: plant simulator, 5 scenarios, baseline and tampered .st programs, runner
