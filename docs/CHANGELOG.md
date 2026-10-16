@@ -5,3 +5,4 @@
 - step 3: deterministic detection (expected-behavior engine, physical checks, evidence episodes)
 - step 4a: alert manager, engine, REST API (state, telemetry, alerts, decisions, scenarios)
 - step 4b: dashboard (live charts, pump status, alerts with decisions, demo control)
+- step 5: model analysis (Nano triage -> Super/Ultra hypotheses, validated, cached, mock mode), dashboard analysis view

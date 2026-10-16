@@ -18,6 +18,7 @@ def state(request: Request):
         "latest": engine.latest_frame(),
         "demo_scenario": engine.demo_scenario,      # ground truth, for the demo panel only
         "active_evidence": engine.active_evidence(),
+        "llm": engine.llm_info(),                   # mock or live model, shown in the UI
     }
 
 

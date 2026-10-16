@@ -116,3 +116,48 @@ def test_scenario_listing_and_demo_label():
     assert engine.demo_scenario == "spoofed_reading"
     engine.stop_scenario()
     assert engine.demo_scenario == "normal"
+
+
+def test_engine_attaches_model_analysis_to_alerts():
+    engine = _engine()
+    engine.start_scenario("logic_tamper")
+    _run(engine, 120)
+    alert = engine.alerts()[0]
+    assert alert.hypotheses and alert.hypotheses[0].label == "logic_tampering"
+    assert alert.operator_explanation.startswith("[MOCK") and alert.recommended_actions
+    assert alert.triage_tier == "ultra"
+    assert all(h.evidence_ids and set(h.evidence_ids) <= {e.id for e in alert.evidence}
+               for h in alert.hypotheses)
+    info = engine.llm_info()
+    assert info["enabled"] and info["mock"] is True and info["stats"]["triage_calls"] == 1
+
+
+def test_analysis_can_be_disabled_and_reset_clears_it():
+    engine = Engine(interval_s=0.0, analyze=False)
+    engine.start_scenario("abnormal_command")
+    _run(engine, 10)
+    assert engine.alerts()[0].hypotheses == [] and engine.llm_info()["enabled"] is False
+
+    engine2 = _engine()
+    engine2.start_scenario("abnormal_command")
+    _run(engine2, 10)
+    assert engine2.alerts()[0].hypotheses
+    engine2.reset_detection()
+    assert engine2.alerts() == [] and engine2.llm_info()["stats"]["triage_calls"] == 1
+    _run(engine2, 12)                                  # same scenario evidence again -> new alert, cached
+    assert engine2.alerts() and engine2.alerts()[0].hypotheses
+
+
+def test_background_analysis_thread_fills_in_the_alert():
+    engine = Engine(interval_s=0.01)
+    engine.start_scenario("abnormal_command")
+    engine.start()
+    deadline = time.time() + 5.0
+    while time.time() < deadline:
+        alerts = engine.alerts()
+        if alerts and alerts[0].operator_explanation:
+            break
+        time.sleep(0.05)
+    engine.stop()
+    alerts = engine.alerts()
+    assert alerts and alerts[0].operator_explanation and alerts[0].hypotheses

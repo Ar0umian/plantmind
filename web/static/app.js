@@ -193,7 +193,8 @@
   function renderAlerts(alerts) {
     $("alert-count").textContent = String(alerts.length);
     var signature = JSON.stringify(alerts.map(function (a) {
-      return [a.id, a.status, a.severity, a.title, a.evidence.length];
+      return [a.id, a.status, a.severity, a.title, a.evidence.length,
+        a.hypotheses.length, a.operator_explanation.length, a.triage_tier];
     }));
     if (signature === lastAlertSignature) { return; }
     lastAlertSignature = signature;
@@ -225,6 +226,7 @@
         list.appendChild(item);
       });
       card.appendChild(list);
+      renderAnalysis(card, alert);
 
       if (alert.status === "open") {
         var actions = el("div", "actions");
@@ -243,6 +245,59 @@
       }
       box.appendChild(card);
     });
+  }
+
+  function renderAnalysis(card, alert) {
+    var box = el("div", "analysis");
+    var head = el("div", "an-head");
+    head.appendChild(el("span", "an-title", "Model analysis"));
+    head.appendChild(el("span", "badge", "model-generated"));
+    if (alert.triage_tier) { head.appendChild(el("span", "badge", "tier: " + alert.triage_tier)); }
+    box.appendChild(head);
+    if (!alert.operator_explanation) {
+      box.appendChild(el("div", "an-pending", "Analyzing..."));
+      card.appendChild(box);
+      return;
+    }
+    box.appendChild(el("p", "an-text", alert.operator_explanation));
+    if (alert.hypotheses.length) {
+      var hyps = el("div", "hyps");
+      alert.hypotheses.forEach(function (h) {
+        var pct = Math.round(h.confidence * 100);
+        var row = el("div", "hyp");
+        var top = el("div", "hyp-top");
+        top.appendChild(el("span", "hyp-label", h.label.replace(/_/g, " ")));
+        top.appendChild(el("span", "hyp-pct", pct + "%"));
+        row.appendChild(top);
+        var bar = el("div", "bar");
+        var fill = el("div", "fill");
+        fill.style.width = pct + "%";
+        bar.appendChild(fill);
+        row.appendChild(bar);
+        row.appendChild(el("div", "hyp-why", h.reasoning + " (" + h.evidence_ids.join(", ") + ")"));
+        hyps.appendChild(row);
+      });
+      box.appendChild(hyps);
+    }
+    if (alert.recommended_actions.length) {
+      box.appendChild(el("div", "an-sub", "Suggested checks (a human decides)"));
+      var list = el("ol", "checks");
+      alert.recommended_actions.forEach(function (text) { list.appendChild(el("li", "", text)); });
+      box.appendChild(list);
+    }
+    card.appendChild(box);
+  }
+
+  function renderLlm(llm) {
+    var pill = $("ai");
+    if (!pill || !llm || !llm.enabled) { return; }
+    if (llm.mock) {
+      pill.textContent = "AI: mock model (offline demo)";
+      pill.className = "pill warn";
+    } else {
+      pill.textContent = "AI: Nemotron live";
+      pill.className = "pill on";
+    }
   }
 
   function decide(alertId, decision) {
@@ -310,6 +365,7 @@
       CHARTS.forEach(function (cfg) { drawChart(cfg, frames); });
       renderAlerts(alerts);
       markActiveScenario(state.demo_scenario);
+      renderLlm(state.llm);
     }).catch(showOffline).then(function () { busy = false; });
   }
 

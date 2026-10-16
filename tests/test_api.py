@@ -77,3 +77,14 @@ def test_dashboard_is_served():
     assert page.status_code == 200 and "PlantMind" in page.text
     assert client.get("/static/app.js").status_code == 200
     assert client.get("/static/style.css").status_code == 200
+
+
+def test_alert_carries_model_analysis_and_state_reports_mock_mode():
+    client, engine = _client()
+    client.post("/api/scenarios/logic_tamper/start")
+    for _ in range(120):
+        engine.step()
+    alert = client.get("/api/alerts").json()[0]
+    assert alert["hypotheses"][0]["label"] == "logic_tampering"
+    assert alert["operator_explanation"].startswith("[MOCK")
+    assert client.get("/api/state").json()["llm"]["mock"] is True
