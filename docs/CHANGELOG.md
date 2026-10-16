@@ -4,3 +4,4 @@
 - step 2: ST parser, knowledge map builder, fixtures/knowledge_map*.json
 - step 3: deterministic detection (expected-behavior engine, physical checks, evidence episodes)
 - step 4a: alert manager, engine, REST API (state, telemetry, alerts, decisions, scenarios)
+- step 4b: dashboard (live charts, pump status, alerts with decisions, demo control)

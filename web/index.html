@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PlantMind - ICS/SCADA guardian</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">&#9670;</span>
+      <div>
+        <h1>PlantMind</h1>
+        <p>Plant-aware guardian for ICS / SCADA &middot; synthetic water treatment plant</p>
+      </div>
+    </div>
+    <span id="live" class="pill off">connecting...</span>
+  </header>
+
+  <main class="layout">
+    <section class="col-left">
+      <div class="panel">
+        <h2>Plant status</h2>
+        <div id="pumps" class="pumps"></div>
+        <div id="tiles" class="tiles"></div>
+      </div>
+      <div class="panel">
+        <h2>Demo control</h2>
+        <p class="hint">Inject a synthetic scenario. The detector never sees the scenario label.</p>
+        <div id="scenarios" class="scenarios"></div>
+        <div class="row">
+          <button id="btn-normal" class="btn">Back to normal</button>
+          <button id="btn-reset" class="btn ghost">Reset detection</button>
+        </div>
+        <p class="hint small">Presenter view &mdash; running scenario: <b id="demo-label">normal</b></p>
+      </div>
+    </section>
+
+    <section class="col-mid">
+      <div class="panel">
+        <h2>Live telemetry <span class="muted">last 3 minutes</span></h2>
+        <div class="charts">
+          <canvas id="chart-levels" aria-label="Tank levels"></canvas>
+          <canvas id="chart-chlorine" aria-label="Chlorine residual"></canvas>
+          <canvas id="chart-flow" aria-label="Intake flow"></canvas>
+          <canvas id="chart-pressure" aria-label="Distribution pressure"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="col-right">
+      <div class="panel">
+        <h2>Alerts <span id="alert-count" class="count">0</span></h2>
+        <p class="hint small">Human decision only &mdash; PlantMind never sends commands to equipment.</p>
+        <div id="alerts" class="alerts"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>Synthetic data only &middot; advisory system &middot; all findings below are rule-based checks of the approved PLC logic</footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>

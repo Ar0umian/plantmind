@@ -69,3 +69,11 @@ def test_knowledge_map_endpoint():
     client, _ = _client()
     body = client.get("/api/knowledge-map").json()
     assert len(body["interlocks"]) == 6 and body["plant_name"] == "WaterPlant"
+
+
+def test_dashboard_is_served():
+    client, _ = _client()
+    page = client.get("/")
+    assert page.status_code == 200 and "PlantMind" in page.text
+    assert client.get("/static/app.js").status_code == 200
+    assert client.get("/static/style.css").status_code == 200
