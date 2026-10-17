@@ -88,3 +88,54 @@ def test_alert_carries_model_analysis_and_state_reports_mock_mode():
     assert alert["hypotheses"][0]["label"] == "logic_tampering"
     assert alert["operator_explanation"].startswith("[MOCK")
     assert client.get("/api/state").json()["llm"]["mock"] is True
+
+
+def _program(name):
+    from agent.engine import PROGRAMS
+    return PROGRAMS[name].read_text(encoding="utf-8")
+
+
+def test_guard_check_endpoint_reports_the_bypass():
+    client, _ = _client()
+    reply = client.post("/api/guard/check", json={"candidate": _program("tampered"), "label": "demo upload"})
+    assert reply.status_code == 200
+    body = reply.json()
+    assert body["report"]["overall_severity"] == "critical" and len(body["report"]["findings"]) == 2
+    assert body["mode"] == "mock" and body["source"] == "demo upload"
+    assert body["report"]["findings"][0]["interlock_id"] == "IL-04"
+    assert "+IF NOT P_101_RUN OR AT_201 > 99.0 THEN" in body["diff"]
+    clean = client.post("/api/guard/check", json={"candidate": _program("baseline")}).json()
+    assert clean["report"]["findings"] == [] and clean["mode"] == "none"
+
+
+def test_guard_rejects_empty_and_oversized_input():
+    client, _ = _client()
+    assert client.post("/api/guard/check", json={"candidate": ""}).status_code == 422
+    assert client.post("/api/guard/check", json={"candidate": "x" * 200_001}).status_code == 422
+
+
+def test_guard_decisions_samples_and_listing():
+    client, _ = _client()
+    first = client.post("/api/guard/check", json={"candidate": _program("tampered")}).json()
+    key = first["report"]["candidate_hash"]
+    ok = client.post(f"/api/guard/{key}/decision", json={"decision": "needs_review"})
+    assert ok.status_code == 200 and ok.json()["report"]["decision"] == "needs_review"
+    assert client.post(f"/api/guard/{key}/decision", json={"decision": "maybe"}).status_code == 422
+    assert client.post("/api/guard/deadbeef/decision", json={"decision": "approved"}).status_code == 404
+    assert [r["report"]["candidate_hash"] for r in client.get("/api/guard/reports").json()] == [key]
+    samples = client.get("/api/guard/samples").json()
+    assert "PROGRAM WaterPlant" in samples["approved"] and "AT_201 > 99.0" in samples["tampered"]
+
+
+def test_guard_running_program_follows_the_scenario():
+    client, engine = _client()
+    engine.step()
+    assert client.get("/api/guard/running").json() == {"matches_approved": True, "result": None}
+    client.post("/api/scenarios/logic_tamper/start")
+    engine.step()
+    body = client.get("/api/guard/running").json()
+    assert body["matches_approved"] is False
+    assert body["result"]["report"]["overall_severity"] == "critical"
+    client.post("/api/scenarios/stop")
+    engine.step()
+    assert client.get("/api/guard/running").json()["matches_approved"] is True

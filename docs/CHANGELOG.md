@@ -7,3 +7,4 @@
 - step 4b: dashboard (live charts, pump status, alerts with decisions, demo control)
 - step 5: model analysis (Nano triage -> Super/Ultra hypotheses, validated, cached, mock mode), dashboard analysis view
 - step 6a: Change Guard (structural diff, rule severity floor, model assessment, MITRE mapping verified), engine checks the running program
+- step 6b: Change Guard API (check, reports, running program, decisions, samples) and dashboard panel

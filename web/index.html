@@ -47,6 +47,17 @@
           <canvas id="chart-pressure" aria-label="Distribution pressure"></canvas>
         </div>
       </div>
+      <div class="panel" id="guard-panel">
+        <h2>Change Guard <span class="muted">approved program vs candidate</span></h2>
+        <div id="guard-running" class="g-run">Checking the running program...</div>
+        <textarea id="guard-text" spellcheck="false" placeholder="Paste a candidate PLC program (Structured Text), choose a file, or load the tampered sample..."></textarea>
+        <div class="row">
+          <button id="guard-sample" class="btn ghost" type="button">Load tampered sample</button>
+          <label class="btn ghost filebtn">Choose file<input id="guard-file" type="file" accept=".st,.txt" hidden></label>
+          <button id="guard-check" class="btn" type="button">Check against approved</button>
+        </div>
+        <div id="guard-result"></div>
+      </div>
     </section>
 
     <section class="col-right">
@@ -60,5 +71,6 @@
 
   <footer>Synthetic data only &middot; advisory system &middot; evidence comes from rule-based checks of the approved PLC logic; model-written analysis is labeled</footer>
   <script src="/static/app.js"></script>
+  <script src="/static/guard.js"></script>
 </body>
 </html>
