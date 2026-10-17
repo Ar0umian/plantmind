@@ -112,7 +112,7 @@ _MOCK_ACTIONS: Dict[str, List[str]] = {
 }
 
 
-def mock_reasoner(alert: Alert) -> ReasonerOutput:
+def mock_reasoner(alert: Alert, extra_context: str = "") -> ReasonerOutput:
     """Deterministic stand-in for the model, used offline (MOCK_LLM=1) and in tests."""
     kinds = [e.kind for e in alert.evidence]
     has_stale = "stale_value" in kinds
@@ -140,6 +140,9 @@ def mock_reasoner(alert: Alert) -> ReasonerOutput:
             add("sensor_fault", 1.0, e.id)
             add("process_upset", 0.7, e.id)
 
+    if "differs from the approved program" in extra_context and alert.evidence:
+        add("logic_tampering", 3.0, alert.evidence[0].id)     # Change Guard saw a program change
+
     total = sum(score.values()) or 1.0
     ranked = sorted(score.items(), key=lambda kv: kv[1], reverse=True)[:3]
     hypotheses = [Hypothesis(label=label, confidence=round(value / total, 2),
@@ -166,5 +169,5 @@ def run_reasoner(llm: LLMClient, tier: str, alert: Alert, kmap: KnowledgeMap,
     if extra_context:
         user += f"\nAdditional context:\n{extra_context}\n"
     raw = llm.generate_json(tier, REASONER_SYSTEM, user, ReasonerOutput,
-                            mock=lambda: mock_reasoner(alert))
+                            mock=lambda: mock_reasoner(alert, extra_context))
     return validate_output(raw, alert)

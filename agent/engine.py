@@ -1,10 +1,11 @@
-"""Engine: simulator -> detector -> alerts -> model analysis, with optional background threads.
+"""Engine: simulator -> detector -> alerts -> model analysis, plus the Change Guard check
+of the running program, with optional background threads.
 
 All public methods are thread-safe (one re-entrant lock). The scenario label is
 exposed ONLY as `demo_scenario` for the demo control panel; detection never sees it.
 
-Model analysis never blocks telemetry: while the engine runs in the background, alerts
-are queued to an analysis worker thread; with manual `step()` calls (tests) it runs inline.
+Model work never blocks telemetry: while the engine runs in the background, jobs (alert
+analysis, program check) go to a worker thread; with manual `step()` calls (tests) they run inline.
 """
 import queue
 import threading
@@ -18,12 +19,16 @@ from core.llm_client import LLMClient
 from agent.alerts import AlertManager
 from agent.analysis import AnalysisPipeline, apply_result
 from agent.detector import Detector
+from knowledge.change_guard import GuardResult, GuardService
 from knowledge.map_builder import build_knowledge_map
 from plant.scenarios.scenarios import SCENARIOS, SCENARIO_NAMES
 from plant.simulator.runner import SimulatorRunner
 
 ROOT = Path(__file__).resolve().parents[1]
-APPROVED_PROGRAM = ROOT / "plant" / "plc_programs" / "water_plant_baseline.st"
+PLC_DIR = ROOT / "plant" / "plc_programs"
+APPROVED_PROGRAM = PLC_DIR / "water_plant_baseline.st"
+# Demo plumbing: which program file the simulated PLC is "running" for each variant.
+PROGRAMS = {"baseline": APPROVED_PROGRAM, "tampered": PLC_DIR / "water_plant_tampered.st"}
 
 
 def load_approved_map() -> KnowledgeMap:
@@ -43,28 +48,48 @@ class Engine:
         self.analyzer: Optional[AnalysisPipeline] = analyzer
         if self.analyzer is None and analyze:
             self.analyzer = AnalysisPipeline(LLMClient(), self.kmap)
+        if self.analyzer is not None and self.analyzer.context_provider is None:
+            self.analyzer.context_provider = self._guard_context
+        guard_llm = self.analyzer.llm if self.analyzer is not None else None
+        self.guard = GuardService(APPROVED_PROGRAM.read_text(encoding="utf-8"), llm=guard_llm)
         self._lock = threading.RLock()
         self._thread: Optional[threading.Thread] = None
         self._worker: Optional[threading.Thread] = None
         self._queue: "queue.Queue" = queue.Queue()
         self._running = False
         self._frame_no = 0
+        self._last_variant: Optional[str] = None
+        self._running_result: Optional[GuardResult] = None
 
     # ------------------------------------------------------------- stepping
     def step(self) -> TelemetryFrame:
         with self._lock:
             frame = self.runner.step_once()
             self._frame_no += 1
+            variant = self.runner.sim.variant
+            if variant != self._last_variant:
+                self._last_variant = variant
+                self._dispatch(("guard", variant, None))
             new = self.detector.process(frame)
             changed = self.alert_manager.ingest(new, self._frame_no, frame.ts)
             if changed and self.analyzer is not None:
                 snapshot = self.runner.recent_frames(60)
                 for alert in changed:
-                    if self._running:
-                        self._queue.put((alert.id, snapshot))
-                    else:
-                        self._analyze(alert.id, snapshot)
+                    self._dispatch(("analyze", alert.id, snapshot))
             return frame
+
+    def _dispatch(self, job) -> None:
+        if self._running:
+            self._queue.put(job)
+        else:
+            self._run_job(job)
+
+    def _run_job(self, job) -> None:
+        kind, first, second = job
+        if kind == "analyze" and self.analyzer is not None:
+            self._analyze(first, second)
+        elif kind == "guard":
+            self._check_running_program(first)
 
     def _analyze(self, alert_id: str, frames: List[TelemetryFrame]) -> None:
         """Runs the model analysis for one alert (the model call happens outside the lock)."""
@@ -85,21 +110,40 @@ class Engine:
                 return            # the alert changed while the model was thinking; a newer pass is queued
             apply_result(current, result)
 
+    def _check_running_program(self, variant: str) -> None:
+        """Reads back the program the PLC runs and compares it with the approved one."""
+        result = None
+        if variant != "baseline":
+            text = PROGRAMS[variant].read_text(encoding="utf-8")
+            result = self.guard.check(text, source="running program (read back from the PLC)")
+        with self._lock:
+            if self.runner.sim.variant == variant:        # still the current program
+                self._running_result = result
+
+    def _guard_context(self, alert: Alert) -> str:
+        with self._lock:
+            result = self._running_result
+        if result is None or not result.report.findings:
+            return ""
+        lines = ["Change Guard: the PLC program currently running differs from the approved program."]
+        lines += [f"- {f.id} [{f.final_severity().value}] {f.summary}" for f in result.report.findings[:5]]
+        return "\n".join(lines)
+
     def _loop(self) -> None:
         while self._running:
             started = time.time()
             self.step()
             time.sleep(max(0.0, self.interval_s - (time.time() - started)))
 
-    def _analysis_loop(self) -> None:
+    def _worker_loop(self) -> None:
         while self._running:
             try:
-                alert_id, frames = self._queue.get(timeout=0.2)
+                job = self._queue.get(timeout=0.2)
             except queue.Empty:
                 continue
             try:
-                self._analyze(alert_id, frames)
-            except Exception:       # analysis must never take the engine down
+                self._run_job(job)
+            except Exception:       # background work must never take the engine down
                 pass
 
     def start(self) -> None:
@@ -108,9 +152,8 @@ class Engine:
         self._running = True
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
-        if self.analyzer is not None:
-            self._worker = threading.Thread(target=self._analysis_loop, daemon=True)
-            self._worker.start()
+        self._worker = threading.Thread(target=self._worker_loop, daemon=True)
+        self._worker.start()
 
     def stop(self) -> None:
         self._running = False
@@ -146,6 +189,9 @@ class Engine:
             self.alert_manager.reset()
             if self.analyzer is not None:
                 self.analyzer.reset()
+            self.guard.reset()
+            self._running_result = None
+            self._last_variant = None          # the next step re-checks the running program
             while True:
                 try:
                     self._queue.get_nowait()
@@ -183,6 +229,11 @@ class Engine:
     def active_evidence(self) -> List[Evidence]:
         with self._lock:
             return self.detector.active
+
+    def guard_running(self) -> Optional[GuardResult]:
+        """Guard result for the program the PLC currently runs (None when it matches the approved one)."""
+        with self._lock:
+            return self._running_result
 
     def llm_info(self) -> dict:
         """Which model mode is active (shown in the UI so a mock is never mistaken for AI)."""
