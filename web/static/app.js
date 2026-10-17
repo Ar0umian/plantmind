@@ -227,6 +227,7 @@
       });
       card.appendChild(list);
       renderAnalysis(card, alert);
+      renderReportLinks(card, alert);
 
       if (alert.status === "open") {
         var actions = el("div", "actions");
@@ -298,6 +299,20 @@
       pill.textContent = "AI: Nemotron live";
       pill.className = "pill on";
     }
+  }
+
+  function renderReportLinks(card, alert) {
+    var base = "/api/alerts/" + encodeURIComponent(alert.id);
+    var row = el("div", "report-links");
+    row.appendChild(el("span", "", "Incident report:"));
+    [["Open", base + "/report.html", false], ["Markdown", base + "/report.md?download=true", true],
+     ["HTML file", base + "/report.html?download=true", true]].forEach(function (item) {
+      var link = el("a", "", item[0]);
+      link.href = item[1];
+      if (item[2]) { link.setAttribute("download", ""); } else { link.target = "_blank"; link.rel = "noopener"; }
+      row.appendChild(link);
+    });
+    card.appendChild(row);
   }
 
   function decide(alertId, decision) {

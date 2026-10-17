@@ -9,3 +9,4 @@
 - step 6a: Change Guard (structural diff, rule severity floor, model assessment, MITRE mapping verified), engine checks the running program
 - step 6b: Change Guard API (check, reports, running program, decisions, samples) and dashboard panel
 - step 7a: incident reports (Markdown/HTML), Tavily client (offline by default), operator assistant (advisory only)
+- step 7b: reports and assistant API, Ask PlantMind panel, incident report links on alerts

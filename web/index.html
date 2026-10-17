@@ -66,11 +66,22 @@
         <p class="hint small">Human decision only &mdash; PlantMind never sends commands to equipment.</p>
         <div id="alerts" class="alerts"></div>
       </div>
+      <div class="panel" id="assistant-panel">
+        <h2>Ask PlantMind</h2>
+        <p class="hint small">Grounded in the approved PLC logic and the live state. Advisory only.</p>
+        <div id="chat-log" class="chat-log"></div>
+        <div id="chat-suggestions" class="suggestions"></div>
+        <div class="chat-input">
+          <input id="chat-input" type="text" maxlength="500" autocomplete="off" placeholder="Ask a question...">
+          <button id="chat-send" class="btn" type="button">Send</button>
+        </div>
+      </div>
     </section>
   </main>
 
   <footer>Synthetic data only &middot; advisory system &middot; evidence comes from rule-based checks of the approved PLC logic; model-written analysis is labeled</footer>
   <script src="/static/app.js"></script>
   <script src="/static/guard.js"></script>
+  <script src="/static/assistant.js"></script>
 </body>
 </html>

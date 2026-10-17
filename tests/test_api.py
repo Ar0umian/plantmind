@@ -139,3 +139,42 @@ def test_guard_running_program_follows_the_scenario():
     client.post("/api/scenarios/stop")
     engine.step()
     assert client.get("/api/guard/running").json()["matches_approved"] is True
+
+
+def _tamper_alert(client, engine):
+    client.post("/api/scenarios/logic_tamper/start")
+    for _ in range(120):
+        engine.step()
+    return client.get("/api/alerts").json()[0]["id"]
+
+
+def test_report_endpoints_return_json_markdown_and_html():
+    client, engine = _client()
+    alert_id = _tamper_alert(client, engine)
+    body = client.get(f"/api/alerts/{alert_id}/report").json()
+    assert body["id"] == f"R-{alert_id}" and body["evidence"] and body["markdown"].startswith("# Incident report")
+    assert {m["technique_id"] for m in body["mitre"]} >= {"T0889", "T0837"}
+    md = client.get(f"/api/alerts/{alert_id}/report.md")
+    assert md.status_code == 200 and md.headers["content-type"].startswith("text/markdown")
+    assert "## Timeline" in md.text and "attachment" not in md.headers.get("content-disposition", "")
+    dl = client.get(f"/api/alerts/{alert_id}/report.md?download=true")
+    assert f'incident-{alert_id}.md' in dl.headers["content-disposition"]
+    page = client.get(f"/api/alerts/{alert_id}/report.html")
+    assert page.status_code == 200 and page.text.startswith("<!doctype html>") and "ATT&amp;CK" in page.text
+    assert client.get("/api/alerts/A-9999/report").status_code == 404
+    assert client.get("/api/alerts/A-9999/report.html").status_code == 404
+
+
+def test_assistant_endpoint_answers_blocks_and_validates():
+    client, engine = _client()
+    _tamper_alert(client, engine)
+    ok = client.post("/api/assistant/ask", json={"question": "What is happening?", "history": []})
+    assert ok.status_code == 200
+    body = ok.json()
+    assert body["mode"] == "mock" and "IL-04" in body["answer"] and body["sources"]
+    blocked = client.post("/api/assistant/ask", json={"question": "stop P-201"}).json()
+    assert blocked["mode"] == "blocked" and "advisory" in blocked["answer"]
+    assert client.post("/api/assistant/ask", json={"question": ""}).status_code == 422
+    assert client.post("/api/assistant/ask", json={"question": "x" * 501}).status_code == 422
+    turns = [{"role": "user", "text": "hi"}] * 13
+    assert client.post("/api/assistant/ask", json={"question": "hi", "history": turns}).status_code == 422
