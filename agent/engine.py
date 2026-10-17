@@ -7,6 +7,7 @@ exposed ONLY as `demo_scenario` for the demo control panel; detection never sees
 Model work never blocks telemetry: while the engine runs in the background, jobs (alert
 analysis, program check) go to a worker thread; with manual `step()` calls (tests) they run inline.
 """
+import copy
 import queue
 import threading
 import time
@@ -14,11 +15,14 @@ from pathlib import Path
 from typing import List, Optional
 
 from core.config import get_settings
-from core.contracts import Alert, Evidence, KnowledgeMap, TelemetryFrame
+from core.contracts import Alert, Evidence, IncidentReport, KnowledgeMap, TelemetryFrame
 from core.llm_client import LLMClient
 from agent.alerts import AlertManager
 from agent.analysis import AnalysisPipeline, apply_result
+from agent.assistant import AssistantContext, AssistantReply, OperatorAssistant
 from agent.detector import Detector
+from agent.report_generator import ReportBundle, build_incident_report
+from agent.tavily_client import TavilyClient
 from knowledge.change_guard import GuardResult, GuardService
 from knowledge.map_builder import build_knowledge_map
 from plant.scenarios.scenarios import SCENARIOS, SCENARIO_NAMES
@@ -39,7 +43,8 @@ def load_approved_map() -> KnowledgeMap:
 class Engine:
     def __init__(self, runner: Optional[SimulatorRunner] = None, kmap: Optional[KnowledgeMap] = None,
                  interval_s: Optional[float] = None, ticks_per_frame: int = 1,
-                 analyzer: Optional[AnalysisPipeline] = None, analyze: bool = True):
+                 analyzer: Optional[AnalysisPipeline] = None, analyze: bool = True,
+                 tavily: Optional[TavilyClient] = None):
         self.interval_s = interval_s if interval_s is not None else get_settings().telemetry_interval_s
         self.runner = runner or SimulatorRunner(interval_s=0.0, ticks_per_frame=ticks_per_frame)
         self.kmap = kmap or load_approved_map()
@@ -50,8 +55,10 @@ class Engine:
             self.analyzer = AnalysisPipeline(LLMClient(), self.kmap)
         if self.analyzer is not None and self.analyzer.context_provider is None:
             self.analyzer.context_provider = self._guard_context
-        guard_llm = self.analyzer.llm if self.analyzer is not None else None
-        self.guard = GuardService(APPROVED_PROGRAM.read_text(encoding="utf-8"), llm=guard_llm)
+        self.llm = self.analyzer.llm if self.analyzer is not None else LLMClient()
+        self.guard = GuardService(APPROVED_PROGRAM.read_text(encoding="utf-8"), llm=self.llm)
+        self.tavily = tavily or TavilyClient()
+        self.assistant = OperatorAssistant(self.llm, self.kmap)
         self._lock = threading.RLock()
         self._thread: Optional[threading.Thread] = None
         self._worker: Optional[threading.Thread] = None
@@ -234,6 +241,31 @@ class Engine:
         """Guard result for the program the PLC currently runs (None when it matches the approved one)."""
         with self._lock:
             return self._running_result
+
+    # ------------------------------------------------- reports and assistant
+    def incident_report_bundle(self, alert_id: str) -> Optional[ReportBundle]:
+        """Builds the incident report for an alert (web search happens outside the lock)."""
+        with self._lock:
+            alert = self.alert_manager.get(alert_id)
+            if alert is None:
+                return None
+            snapshot = copy.deepcopy(alert)
+            frames = self.runner.recent_frames(60)
+            decisions = [d for d in self.alert_manager.decisions if d["alert_id"] == alert_id]
+            guard = self._running_result
+        return build_incident_report(snapshot, frames, decisions, guard, self.tavily,
+                                     llm_mock=bool(self.llm.is_mock))
+
+    def incident_report(self, alert_id: str) -> Optional[IncidentReport]:
+        bundle = self.incident_report_bundle(alert_id)
+        return None if bundle is None else bundle.report
+
+    def ask(self, question: str, history: Optional[List[dict]] = None) -> AssistantReply:
+        with self._lock:
+            ctx = AssistantContext(frame=self.runner.latest_frame(),
+                                   alerts=copy.deepcopy(self.alert_manager.alerts),
+                                   evidence=list(self.detector.active), guard=self._running_result)
+        return self.assistant.ask(question, ctx, history)
 
     def llm_info(self) -> dict:
         """Which model mode is active (shown in the UI so a mock is never mistaken for AI)."""
