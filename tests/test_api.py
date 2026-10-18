@@ -178,3 +178,15 @@ def test_assistant_endpoint_answers_blocks_and_validates():
     assert client.post("/api/assistant/ask", json={"question": "x" * 501}).status_code == 422
     turns = [{"role": "user", "text": "hi"}] * 13
     assert client.post("/api/assistant/ask", json={"question": "hi", "history": turns}).status_code == 422
+
+
+def test_plant_document_endpoints():
+    client, _ = _client()
+    doc = client.get("/api/docs/plant").json()
+    assert doc["summary_mode"] == "mock" and doc["markdown"].startswith("# Plant operating document")
+    md = client.get("/api/docs/plant.md")
+    assert md.status_code == 200 and md.headers["content-type"].startswith("text/markdown")
+    assert "## Protective interlocks" in md.text
+    dl = client.get("/api/docs/plant.html?download=true")
+    assert "plant-operating-document.html" in dl.headers["content-disposition"]
+    assert dl.text.startswith("<!doctype html>") and "IL-04" in dl.text

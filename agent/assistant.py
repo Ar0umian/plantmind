@@ -138,6 +138,19 @@ def mock_answer(question: str, ctx: AssistantContext, kmap: KnowledgeMap) -> Ass
         text = " ".join(f"{i.id} trips {i.target} when {_cond_text(i)}. {i.purpose}".strip() for i in chosen)
         return AssistantAnswer(answer=tag + text, sources=[i.id for i in chosen])
 
+    pump_tags = [t.upper() for t in re.findall(r"\bp-\d{3}\b", q)]
+    if pump_tags and any(w in q for w in ("stop", "trip", "shut", "protect", "what stops")):
+        pump = pump_tags[0]
+        reasons = [i for i in kmap.interlocks if i.target == pump]
+        rules = [r.description.split(" (control rule")[0] for r in kmap.relations
+                 if r.target == pump and "auto-stops" in r.description]
+        if not reasons and not rules:
+            return AssistantAnswer(answer=tag + f"I find nothing in the approved program that stops {pump}.",
+                                   sources=[pump])
+        parts = [f"{i.id}: when {_cond_text(i)}" for i in reasons] + [f"automatic control: {t}" for t in rules]
+        return AssistantAnswer(answer=tag + f"{pump} is stopped by " + "; ".join(parts) + ".",
+                               sources=[pump] + [i.id for i in reasons])
+
     if any(w in q for w in ("program", "change guard", "approved", "tamper", "plc logic", "modified")):
         if ctx.guard is None or not ctx.guard.report.findings:
             return AssistantAnswer(answer=tag + "The program running on the PLC matches the approved baseline.", sources=[])

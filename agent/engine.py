@@ -24,6 +24,7 @@ from agent.detector import Detector
 from agent.report_generator import ReportBundle, build_incident_report
 from agent.tavily_client import TavilyClient
 from knowledge.change_guard import GuardResult, GuardService
+from knowledge.doc_generator import PlantDocument, generate_plant_document
 from knowledge.map_builder import build_knowledge_map
 from plant.scenarios.scenarios import SCENARIOS, SCENARIO_NAMES
 from plant.simulator.runner import SimulatorRunner
@@ -59,6 +60,7 @@ class Engine:
         self.guard = GuardService(APPROVED_PROGRAM.read_text(encoding="utf-8"), llm=self.llm)
         self.tavily = tavily or TavilyClient()
         self.assistant = OperatorAssistant(self.llm, self.kmap)
+        self._plant_doc: Optional[PlantDocument] = None
         self._lock = threading.RLock()
         self._thread: Optional[threading.Thread] = None
         self._worker: Optional[threading.Thread] = None
@@ -266,6 +268,16 @@ class Engine:
                                    alerts=copy.deepcopy(self.alert_manager.alerts),
                                    evidence=list(self.detector.active), guard=self._running_result)
         return self.assistant.ask(question, ctx, history)
+
+    def plant_document(self) -> PlantDocument:
+        """The plant operating document (generated once, then cached)."""
+        with self._lock:
+            if self._plant_doc is not None:
+                return self._plant_doc
+        doc = generate_plant_document(self.kmap, self.llm)        # model call outside the lock
+        with self._lock:
+            self._plant_doc = doc
+            return doc
 
     def llm_info(self) -> dict:
         """Which model mode is active (shown in the UI so a mock is never mistaken for AI)."""

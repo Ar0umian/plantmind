@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from agent.engine import Engine
-from api.routers import alerts, assistant, guard, reports, scenarios, telemetry
+from api.routers import alerts, assistant, guard, plant_docs, reports, scenarios, telemetry
 from core.contracts import CONTRACT_VERSION
 
 WEB_DIR = Path(__file__).resolve().parents[1] / "web"
@@ -41,6 +41,7 @@ def create_app(autostart: bool = True, engine: Optional[Engine] = None) -> FastA
     app.include_router(guard.router, prefix="/api")
     app.include_router(reports.router, prefix="/api")
     app.include_router(assistant.router, prefix="/api")
+    app.include_router(plant_docs.router, prefix="/api")
 
     app.mount("/static", StaticFiles(directory=str(WEB_DIR / "static")), name="static")
 
