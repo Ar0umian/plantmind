@@ -13,3 +13,4 @@
 - step 8: plant operating document (Markdown/HTML) from the knowledge map, assistant explains what stops each pump, docs panel
 - docs: README, ARCHITECTURE, FUNCTIONAL_REQUIREMENTS restored; verifier false positive fixed
 - docs: demo script, feedback notes, submission checklist; scripts: check_tavily, live_eval
+- docs: demo script, feedback notes, submission checklist; scripts: check_tavily, live_eval
