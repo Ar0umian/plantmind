@@ -14,3 +14,4 @@
 - docs: README, ARCHITECTURE, FUNCTIONAL_REQUIREMENTS restored; verifier false positive fixed
 - docs: demo script, feedback notes, submission checklist; scripts: check_tavily, live_eval
 - docs: demo script, feedback notes, submission checklist; scripts: check_tavily, live_eval
+- prompt tuning round 2 (telemetry noise facts, finding IDs as citations)

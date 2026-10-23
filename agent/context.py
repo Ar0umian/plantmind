@@ -6,6 +6,11 @@ from core.contracts import Evidence, KnowledgeMap, TelemetryFrame
 ANALOG_TAGS = ("LT-101", "FT-101", "AT-201", "LT-301", "PT-301")
 
 
+def _std(series: List[float]) -> float:
+    mean = sum(series) / len(series)
+    return (sum((x - mean) ** 2 for x in series) / len(series)) ** 0.5
+
+
 def summarize_frames(frames: List[TelemetryFrame]) -> str:
     if not frames:
         return "No telemetry available."
@@ -13,13 +18,19 @@ def summarize_frames(frames: List[TelemetryFrame]) -> str:
     for tag in ANALOG_TAGS:
         series = [f.values[tag] for f in frames if tag in f.values]
         if series:
-            lines.append(f"- {tag}: first={series[0]:.2f} last={series[-1]:.2f} "
-                         f"min={min(series):.2f} max={max(series):.2f}")
+            note = " (reading is EXACTLY constant: no noise at all)" if max(series) == min(series) else ""
+            lines.append(f"- {tag}: first={series[0]:.2f} last={series[-1]:.2f} min={min(series):.2f} "
+                         f"max={max(series):.2f} std={_std(series):.3f}{note}")
     last = frames[-1]
-    pumps = ", ".join(
-        f"{pump}={'ON' if running else 'OFF'} (command {'ON' if last.commands.get(pump) else 'OFF'})"
-        for pump, running in last.status.items())
-    lines.append(f"- pumps now: {pumps}")
+    for pump, running in last.status.items():
+        streak = 0
+        for frame in reversed(frames):
+            if frame.status.get(pump) is running:
+                streak += 1
+            else:
+                break
+        lines.append(f"- {pump}: {'ON' if running else 'OFF'} for the last {streak} of {len(frames)} frames "
+                     f"(command now {'ON' if last.commands.get(pump) else 'OFF'})")
     return "\n".join(lines)
 
 

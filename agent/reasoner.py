@@ -3,6 +3,7 @@
 The model may only cite evidence IDs produced by the deterministic layer.
 `validate_output` discards anything else (FR-DET-06).
 """
+import re
 from typing import Dict, List, Tuple
 
 from pydantic import BaseModel, Field
@@ -37,20 +38,27 @@ REASONER_SYSTEM = (
     "operator reason.\n"
     "- process_upset: a genuine disturbance visible consistently across several instruments.\n\n"
     "Rules:\n"
-    "1. Cite ONLY evidence IDs from the list (like EV-0001) in each hypothesis. Never invent IDs or facts.\n"
+    "1. In evidence_ids put ONLY IDs from the evidence list (like EV-0001) and, when a Change Guard section "
+    "lists findings, finding IDs (like F-001). Never put interlock IDs, tags or alarm IDs in evidence_ids "
+    "(mention them in the reasoning text instead). Never invent IDs or facts.\n"
     "2. Confidences are your relative belief between 0 and 1 and must sum to at most 1.\n"
     "3. Give at most 4 hypotheses, most likely first.\n"
     "4. operator_explanation: 2 to 4 plain sentences for a control-room operator; say what is "
     "certain (the evidence) and what is only likely (your hypotheses).\n"
     "5. recommended_actions: up to 5 ordered CHECKS for a human to perform (verify locally, compare "
     "against an independent measurement, review access logs). They are suggestions that a human "
-    "approves. Never tell anyone to send commands to the equipment yourself."
+    "approves. Never tell anyone to send commands to the equipment yourself.\n"
+    "6. Use the telemetry facts: std tells whether a reading still has natural noise (std above 0) or is "
+    "exactly constant; the pump lines say how long a pump has really been running. A level reading that "
+    "keeps natural noise but does not move while its pump runs and the flow collapses points to spoofing, "
+    "not to a frozen sensor."
 )
 
 
-def validate_output(out: ReasonerOutput, alert: Alert) -> Tuple[ReasonerOutput, List[str]]:
+def validate_output(out: ReasonerOutput, alert: Alert, extra_ids=None) -> Tuple[ReasonerOutput, List[str]]:
     """Keep only claims grounded in this alert's evidence; returns (clean output, notes)."""
-    valid = {e.id for e in alert.evidence}
+    real_ids = {e.id for e in alert.evidence}
+    valid = real_ids | set(extra_ids or ())      # extra_ids: Change Guard finding IDs
     notes: List[str] = []
     cleaned: List[Hypothesis] = []
     for h in out.hypotheses:
@@ -74,7 +82,7 @@ def validate_output(out: ReasonerOutput, alert: Alert) -> Tuple[ReasonerOutput, 
         cleaned = [Hypothesis(label="unknown", confidence=1.0,
                               reasoning="The model gave no hypothesis grounded in the evidence; "
                                         "the evidence is listed for human review.",
-                              evidence_ids=sorted(valid))]
+                              evidence_ids=sorted(real_ids))]
         notes.append("no usable hypothesis: fell back to 'unknown'")
     actions = [" ".join(a.split()) for a in out.recommended_actions if a.strip()][:MAX_ACTIONS]
     return ReasonerOutput(hypotheses=cleaned,
@@ -170,4 +178,5 @@ def run_reasoner(llm: LLMClient, tier: str, alert: Alert, kmap: KnowledgeMap,
         user += f"\nAdditional context:\n{extra_context}\n"
     raw = llm.generate_json(tier, REASONER_SYSTEM, user, ReasonerOutput,
                             mock=lambda: mock_reasoner(alert, extra_context))
-    return validate_output(raw, alert)
+    extra_ids = set(re.findall(r"\bF-\d{3}\b", extra_context))
+    return validate_output(raw, alert, extra_ids)

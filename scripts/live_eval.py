@@ -51,6 +51,7 @@ def main() -> None:
         preflight()
     from agent.engine import Engine
     started = time.time()
+    print('[progress] live evaluation started; it takes a few minutes and prints at the end of each part', flush=True)
     engine = Engine(interval_s=0.0)
     usage = engine.llm.usage
     mode = "DRY RUN (mock, nothing real was called)" if DRY else "LIVE (Nemotron on Nebius Token Factory + Tavily)"
@@ -64,6 +65,7 @@ def main() -> None:
     correct = 0
     for name, ticks, expected in SCENARIOS:
         before = len(usage)
+        print(f'[progress] scenario {name} ...', flush=True)
         engine.start_scenario(name)
         for _ in range(ticks):
             engine.step()
@@ -77,9 +79,11 @@ def main() -> None:
             notes = result.notes
         ok = top == expected
         correct += ok
+        print(f'[progress]   {name}: top cause = {top} (expected {expected}), {calls} model calls, {secs:.1f}s', flush=True)
         lines.append(f"| {name} | {expected} | {top} | {'yes' if ok else 'NO'} | {tier} | {calls} | "
                      f"{tin}/{tout} | {secs:.1f} | {'; '.join(notes)[:80] or '-'} |")
 
+    print('[progress] change guard, assistant, document and report ...', flush=True)
     engine.start_scenario("logic_tamper")
     engine.step()
     guard = engine.guard_running()
