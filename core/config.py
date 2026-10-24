@@ -24,6 +24,7 @@ class Settings:
     tavily_api_key: str
     mock_llm: bool
     mock_tavily: bool
+    no_think_tiers: tuple
     telemetry_interval_s: float
     host: str
     port: int
@@ -39,6 +40,7 @@ def get_settings() -> Settings:
         tavily_api_key=os.getenv("TAVILY_API_KEY", ""),
         mock_llm=_flag("MOCK_LLM", True),
         mock_tavily=_flag("MOCK_TAVILY", True),
+        no_think_tiers=tuple(t.strip() for t in os.getenv("NO_THINK_TIERS", "nano").split(",") if t.strip()),
         telemetry_interval_s=float(os.getenv("TELEMETRY_INTERVAL_S", "1")),
         host=os.getenv("HOST", "127.0.0.1"),
         port=int(os.getenv("PORT", "8000")),

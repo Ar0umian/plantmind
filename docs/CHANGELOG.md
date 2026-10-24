@@ -16,3 +16,4 @@
 - docs: demo script, feedback notes, submission checklist; scripts: check_tavily, live_eval
 - prompt tuning round 2 (telemetry noise facts, finding IDs as citations)
 - prompt tuning round 2 (telemetry noise facts, finding IDs as citations)
+- Nano runs with hidden reasoning off (NO_THINK_TIERS=nano), based on the probe

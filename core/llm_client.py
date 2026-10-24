@@ -37,6 +37,7 @@ class LLMClient:
         self.settings = settings or get_settings()
         self.usage: List[dict] = []
         self._client = None
+        self._no_think_rejected = set()
 
     @property
     def is_mock(self) -> bool:
@@ -67,14 +68,16 @@ class LLMClient:
         client = self._get_client()
         last_exc: Optional[Exception] = None
         for attempt in range(3):
+            kwargs = {}
             try:
                 started = time.time()
-                resp = client.chat.completions.create(
-                    model=model,
-                    messages=[{"role": "system", "content": system},
-                              {"role": "user", "content": user}],
-                    temperature=0.2,
-                )
+                kwargs = dict(model=model,
+                              messages=[{"role": "system", "content": system},
+                                        {"role": "user", "content": user}],
+                              temperature=0.2)
+                if tier in getattr(self.settings, "no_think_tiers", ()) and tier not in self._no_think_rejected:
+                    kwargs["extra_body"] = {"chat_template_kwargs": {"enable_thinking": False}}
+                resp = client.chat.completions.create(**kwargs)
                 usage = getattr(resp, "usage", None)
                 self.usage.append({
                     "tier": tier, "model": model,
@@ -84,6 +87,9 @@ class LLMClient:
                 })
                 return resp.choices[0].message.content or ""
             except Exception as exc:  # network or API error
+                if "extra_body" in kwargs and getattr(exc, "status_code", None) == 400:
+                    self._no_think_rejected.add(tier)     # the model does not accept the option: stop sending it
+                    continue
                 last_exc = exc
                 time.sleep(1.5 * (attempt + 1))
         raise LLMError(f"LLM call failed after retries: {last_exc}")
