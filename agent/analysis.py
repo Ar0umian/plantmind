@@ -7,6 +7,7 @@ If the model fails, the deterministic alert stays untouched (NFR-REL-01).
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
+from agent.alerts import KIND_SEVERITY
 from agent.reasoner import run_reasoner
 from agent.triage import TriageResult, run_triage
 from core.contracts import (Alert, Hypothesis, KnowledgeMap, Severity, TelemetryFrame,
@@ -94,10 +95,23 @@ class AnalysisPipeline:
         return result
 
 
+_LEVELS = [Severity.info, Severity.low, Severity.medium, Severity.high, Severity.critical]
+
+
+def _capped(floor: Severity, suggested: Optional[Severity]) -> Severity:
+    """The rule-based floor, raised by the model by at most one level (never lowered)."""
+    if suggested is None:
+        return floor
+    ceiling = _LEVELS[min(_LEVELS.index(floor) + 1, len(_LEVELS) - 1)]
+    allowed = suggested if _LEVELS.index(suggested) <= _LEVELS.index(ceiling) else ceiling
+    return max_severity(floor, allowed)
+
+
 def apply_result(alert: Alert, result: AnalysisResult) -> None:
     """Write the analysis onto the alert. The rule-based severity is a floor: never lowered."""
     alert.hypotheses = list(result.hypotheses)
     alert.operator_explanation = result.explanation
     alert.recommended_actions = list(result.actions)
     alert.triage_tier = result.tier_used if result.tier_used in ("nano", "super", "ultra") else "nano"
-    alert.severity = max_severity(alert.severity, result.suggested_severity)
+    rule_floor = max_severity(*[KIND_SEVERITY[e.kind] for e in alert.evidence]) if alert.evidence else alert.severity
+    alert.severity = max_severity(alert.severity, _capped(rule_floor, result.suggested_severity))

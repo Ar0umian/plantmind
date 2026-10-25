@@ -17,3 +17,4 @@
 - prompt tuning round 2 (telemetry noise facts, finding IDs as citations)
 - prompt tuning round 2 (telemetry noise facts, finding IDs as citations)
 - Nano runs with hidden reasoning off (NO_THINK_TIERS=nano), based on the probe
+- model severity raise capped at one level; stability evaluation script

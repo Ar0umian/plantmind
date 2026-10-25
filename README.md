@@ -49,6 +49,7 @@ docs/ requirements, build plan, architecture
 ## Limitations
 
 - The plant is a **synthetic simulation**; thresholds and checks are tuned to it and are demo values, not validated on real plants.
+- In the `abnormal_command` scenario the treated tank is also low, which is a real process condition. In repeated live runs the models ranked *command abuse* first most of the time and reported *process upset* as a plausible alternative; the models are not deterministic, so single runs can differ.
 - The parser understands a **subset of IEC 61131-3 Structured Text**. Anything else is reported as "could not be analyzed", never ignored silently.
 - Cause ranking is decision support, not proof. The ATT&CK mapping is a heuristic aid for the analyst.
 - This is a hackathon prototype, **not a certified safety system**.
