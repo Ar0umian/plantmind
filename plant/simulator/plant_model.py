@@ -57,6 +57,20 @@ class PlantSim:
         self.last_trips: Dict[str, list] = {}
 
     # ------------------------------------------------------------ helpers
+    def reset_state(self) -> None:
+        """Back to the nominal starting state. The tick counter keeps counting, the noise generator continues."""
+        self.raw, self.treated, self.chlorine = 60.0, 60.0, 1.5
+        self.auto = {"P-101": True, "P-201": False, "P-301": True}
+        self.status = {"P-101": True, "P-201": False, "P-301": True}
+        self.cmd = dict(self.status)
+        self.hmi_cmd = {"P-201": False, "P-301": False}
+        self.sensor_override.clear()
+        self.on_tick = None
+        self.variant = "baseline"
+        self.scenario_name = "normal"
+        self.scenario_age = 0
+        self.last_trips = {}
+
     def set_variant(self, variant: str) -> None:
         if variant not in il.UNWIRED:
             raise ValueError(f"unknown program variant: {variant}")

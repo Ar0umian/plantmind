@@ -92,6 +92,7 @@ def activate(sim: PlantSim, name: str) -> None:
     if name not in SCENARIOS:
         raise ValueError(f"unknown scenario '{name}', expected one of {SCENARIO_NAMES}")
     scenario = SCENARIOS[name]
+    sim.reset_state()
     _reset(sim)
     sim.scenario_name = name
     sim.scenario_age = 0
