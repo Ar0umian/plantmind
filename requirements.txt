@@ -8,3 +8,6 @@ numpy
 jinja2
 tavily-python
 pytest
+fastapi
+uvicorn
+requests
