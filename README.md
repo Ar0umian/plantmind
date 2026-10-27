@@ -8,7 +8,27 @@ Built for the **Nebius x NVIDIA Global AI Hackathon** (track: Best Apps & Agents
 Nebius Token Factory** and **Tavily**. All plant data is synthetic. PlantMind is **advisory only**: it never
 sends a command to any equipment.
 
+---
+
 <!-- TODO(live): add docs/screenshots/dashboard.png and the YouTube demo link here -->
+## 📸 Demo & Interface Screenshots
+
+| Main Dashboard | Change Guard & Diff |
+| :---: | :---: |
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Change Guard](docs/screenshots/change-guard.png) |
+| *Real-time telemetry and plant status overview* | *Interlock-level PLC program diff and tampering check* |
+
+| Alert Analysis & Ranked Causes | Incident Report |
+| :---: | :---: |
+| ![Alert Analysis](docs/screenshots/alert-analysis.png) | ![Incident Report](docs/screenshots/incident-report.png) |
+| *Physics reasoning and Nemotron AI evaluation* | *Detailed multi-source incident breakdown with Tavily* |
+
+| Assistant: Querying Interlocks | Assistant: Safety Guardrails |
+| :---: | :---: |
+| ![Assistant 1](docs/screenshots/assistant1.png) | ![Assistant 2](docs/screenshots/assistant2.png) |
+| *Plain-language answers grounded in PLC logic* | *Strict advisory-only refusal of unsafe commands* |
+
+---
 
 ## The problem
 
