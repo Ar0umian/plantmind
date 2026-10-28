@@ -33,6 +33,10 @@ sends a command to any equipment.
 | ![Assistant 1](docs/screenshots/assistant1.png) | ![Assistant 2](docs/screenshots/assistant2.png) |
 | *Plain-language answers grounded in PLC logic* | *Strict advisory-only refusal of unsafe commands* |
 
+
+> ⚠️ **Note on Demo Control Scenarios & Latency:**
+> When clicking any scenario button in the **Demo Control** panel (such as *Sensor Fault*, *Spoofed Reading*, or *Logic Tamper*), please allow a few seconds for the dashboard and alerts to update. This minor latency occurs because **PlantMind** performs real-time telemetry processing, multi-tiered AI inference via **NVIDIA Nemotron**, and live context retrieval before populating the security alerts.
+
 ---
 
 ## The problem
