@@ -22,5 +22,3 @@ primary_region = 'cdg'
   cpus = 1
   memory_mb = 1024
 
-[processes]
-  app = "python -m uvicorn api.main:app --host 0.0.0.0 --port 8000"
