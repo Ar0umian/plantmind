@@ -1,1 +1,1 @@
-web: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+web: /layers/paketo-buildpacks_cpython/cpython/bin/python3 -m uvicorn api.main:app --host 0.0.0.0 --port 8000
