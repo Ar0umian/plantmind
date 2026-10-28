@@ -11,6 +11,11 @@ sends a command to any equipment.
 ---
 
 <!-- TODO(live): add docs/screenshots/dashboard.png and the YouTube demo link here -->
+## 🚀 Live Demo & Video
+* **Live Deployment:** [Northflank](https://p01--plantmind--gdwkw8lmlr6f.code.run/)
+* **Demo Video:** [YouTube demo video ](https://www.youtube.com/watch?v=-DpCMZgjb30)
+
+
 ## 📸 Demo & Interface Screenshots
 
 | Main Dashboard | Change Guard & Diff |
@@ -85,6 +90,47 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). In short:
 - The parser understands a **subset of IEC 61131-3 Structured Text**. Anything else is reported as "could not be analyzed", never ignored silently.
 - Cause ranking is decision support, not proof. The ATT&CK mapping is a heuristic aid for the analyst.
 - This is a hackathon prototype, **not a certified safety system**.
+
+---
+## 💻 Local Setup & Installation
+
+Follow these steps to run **PlantMind** locally on your machine:
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/ar0umxia/plantmind.git
+cd plantmind
+```
+
+### 2. Set Up Virtual Environment (Recommended)
+```bash
+python3 -m venv venv
+source venv/bin/activate  # On macOS/Linux
+# venv\Scripts\activate   # On Windows
+```
+
+### 3. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configure Environment Variables
+Create a `.env` file in the root directory and add your API keys Or, use the `.env.example` file located in the root directory and add the keys there. :
+```env
+NEBIUS_API_KEY=your_nebius_api_key_here
+TAVILY_API_KEY=your_tavily_api_key_here
+```
+
+### 5. Run the Application
+Make the script executable and run the development server:
+```bash
+chmod +x scripts/run_dev.sh
+./scripts/run_dev.sh
+```
+
+Open your browser and navigate to `http://localhost:8000` (or `http://localhost:8000/docs` for API documentation).
+---
+
 
 ## License
 
